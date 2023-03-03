@@ -1,10 +1,12 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/godbus/dbus/v5"
 	"go.i3wm.org/i3/v4"
@@ -16,8 +18,48 @@ func init() {
 	flag.BoolVar(&debug, "debug", false, "Enable debug log printing")
 }
 
+func waitForDbus() error {
+	result := make(chan error, 1)
+	go func() {
+		result <- checkDbus()
+	}()
+	select {
+	case <-time.After(10 * time.Second):
+		return errors.New("timed out")
+	case result := <-result:
+		return result
+	}
+}
+
+func checkDbus() error {
+	conn, err := dbus.SessionBus()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	for {
+		obj := conn.Object("i3.status.rs", "/LayoutMode")
+		call := obj.Call("i3.status.rs.SetStatus", 0, "", "", "Idle")
+		if call.Err != nil {
+			if debug {
+				log.Println("Call response:", call.Err)
+			}
+		} else {
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
+	return nil
+}
+
 func main() {
 	flag.Parse()
+
+	err := waitForDbus()
+	if err != nil {
+		log.Fatalln("Error waiting for dbus:", err)
+	}
 
 	var wg sync.WaitGroup
 	var lastFocus *i3.Node
@@ -56,7 +98,6 @@ func main() {
 					if focusedNode != nil {
 						if parent := focusedNode.FindParent(); parent != nil {
 							if debug {
-
 								log.Println("focus change:", parent.Layout)
 							}
 							messages <- string(focusedNode.FindParent().Layout)
@@ -143,10 +184,6 @@ func main() {
 		defer conn.Close()
 
 		obj := conn.Object("i3.status.rs", "/LayoutMode")
-		call := obj.Call("i3.status.rs.SetStatus", 0, "", "", "Idle")
-		if call.Err != nil {
-			log.Fatalln("Failed to call function:", call.Err)
-		}
 		for msg := range messages {
 			if msg == "q" {
 				return
