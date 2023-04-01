@@ -39,8 +39,8 @@ func checkDbus() error {
 	defer conn.Close()
 
 	for {
-		obj := conn.Object("i3.status.rs", "/LayoutMode")
-		call := obj.Call("i3.status.rs.SetStatus", 0, "", "", "Idle")
+		obj := conn.Object("rs.i3status", "/LayoutMode")
+		call := obj.Call("rs.i3status.custom.SetText", 0, "", "Idle")
 		if call.Err != nil {
 			if debug {
 				log.Println("Call response:", call.Err)
@@ -183,12 +183,12 @@ func main() {
 		}
 		defer conn.Close()
 
-		obj := conn.Object("i3.status.rs", "/LayoutMode")
+		obj := conn.Object("rs.i3status", "/LayoutMode")
 		for msg := range messages {
 			if msg == "q" {
 				return
 			}
-			call := obj.Call("i3.status.rs.SetStatus", 0, msg, "", "Idle")
+			call := obj.Call("rs.i3status.custom.SetText", 0, msg, "Idle")
 			if call.Err != nil {
 				log.Fatalln("Failed to call function:", call.Err)
 			}
