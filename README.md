@@ -17,13 +17,12 @@ Add this in your i3status-rs configuration (`config.toml`):
 ```
 [[block]]
 block = "custom_dbus"
-name = "LayoutMode"
-initial_text = "layout"
+path = "/LayoutMode"
 ```
 
 You can verify the block is defined and working with something like:
 ```
-gdbus introspect --session --dest i3.status.rs --object-path /LayoutMode
+gdbus introspect --session --dest rs.i3status --object-path /LayoutMode
 ```
 
 ## i3 configuration
